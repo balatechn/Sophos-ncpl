@@ -13,8 +13,9 @@ const { requireAuth } = require('./middleware/auth');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Security headers (relaxed CSP for inline Tailwind/Alpine)
+// Security headers (relaxed CSP for inline Tailwind/Alpine; no HTTPS enforcement since running on HTTP)
 app.use(helmet({
+  hsts: false,
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
