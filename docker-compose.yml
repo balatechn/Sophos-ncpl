@@ -1,0 +1,25 @@
+version: "3.8"
+
+services:
+  sophos-dashboard:
+    build: .
+    container_name: sophos-dashboard
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - SESSION_SECRET=${SESSION_SECRET}
+      - DASHBOARD_USERNAME=${DASHBOARD_USERNAME}
+      - DASHBOARD_PASSWORD=${DASHBOARD_PASSWORD}
+      - SOPHOS_CLIENT_ID=${SOPHOS_CLIENT_ID}
+      - SOPHOS_CLIENT_SECRET=${SOPHOS_CLIENT_SECRET}
+      - SOPHOS_TENANT_ID=${SOPHOS_TENANT_ID}
+      - SOPHOS_BASE_URL=${SOPHOS_BASE_URL}
+      - SOPHOS_AUTH_URL=${SOPHOS_AUTH_URL}
+      - CACHE_TTL=${CACHE_TTL}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/login"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

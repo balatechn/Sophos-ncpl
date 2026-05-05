@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sophos Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script src="https://unpkg.com/alpinejs@3/dist/cdn.min.js" defer></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6/css/all.min.css">
+  <style>
+    [x-cloak] { display: none !important; }
+    .sidebar-link { @apply flex items-center gap-3 px-4 py-2.5 rounded-lg text-slate-300 hover:bg-blue-700/50 hover:text-white transition-colors duration-150; }
+    .sidebar-link.active { @apply bg-blue-600 text-white; }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex" x-data="app()" x-init="init()">
+
+  <!-- Sidebar -->
+  <aside class="w-64 bg-slate-800 border-r border-slate-700 flex flex-col fixed h-full z-30">
+    <div class="p-5 border-b border-slate-700">
+      <div class="flex items-center gap-3">
+        <div class="bg-blue-600 rounded-lg p-2">
+          <i class="fas fa-shield-halved text-white text-lg"></i>
+        </div>
+        <div>
+          <div class="font-bold text-white text-sm">Sophos Central</div>
+          <div class="text-xs text-slate-400">NCPL Dashboard</div>
+        </div>
+      </div>
+    </div>
+    <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
+      <a href="/" class="sidebar-link active"><i class="fas fa-gauge-high w-5 text-center"></i>Dashboard</a>
+      <a href="/endpoints" class="sidebar-link"><i class="fas fa-desktop w-5 text-center"></i>Endpoints</a>
+      <a href="/alerts" class="sidebar-link"><i class="fas fa-bell w-5 text-center"></i>Alerts</a>
+      <a href="/threats" class="sidebar-link"><i class="fas fa-virus w-5 text-center"></i>Threats</a>
+      <a href="/admins" class="sidebar-link"><i class="fas fa-users-gear w-5 text-center"></i>Admins</a>
+    </nav>
+    <div class="p-3 border-t border-slate-700">
+      <form method="POST" action="/auth/logout">
+        <button class="sidebar-link w-full text-red-400 hover:text-red-300 hover:bg-red-900/20">
+          <i class="fas fa-right-from-bracket w-5 text-center"></i>Logout
+        </button>
+      </form>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="ml-64 flex-1 p-6 overflow-y-auto">
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-white">Security Dashboard</h1>
+      <p class="text-slate-400 text-sm mt-1">National Consulting PVTLTD – Sophos Central Overview</p>
+    </div>
+
+    <!-- Stat Cards -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-slate-400 text-sm">Total Endpoints</span>
+          <div class="bg-blue-600/20 p-2 rounded-lg"><i class="fas fa-desktop text-blue-400"></i></div>
+        </div>
+        <div class="text-3xl font-bold text-white" x-text="summary.totalEndpoints ?? '…'"></div>
+      </div>
+      <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-slate-400 text-sm">Healthy</span>
+          <div class="bg-green-600/20 p-2 rounded-lg"><i class="fas fa-circle-check text-green-400"></i></div>
+        </div>
+        <div class="text-3xl font-bold text-green-400" x-text="summary.healthy ?? '…'"></div>
+      </div>
+      <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-slate-400 text-sm">Active Alerts</span>
+          <div class="bg-red-600/20 p-2 rounded-lg"><i class="fas fa-bell text-red-400"></i></div>
+        </div>
+        <div class="text-3xl font-bold text-red-400" x-text="summary.totalAlerts ?? '…'"></div>
+      </div>
+      <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-slate-400 text-sm">Tamper OFF</span>
+          <div class="bg-yellow-600/20 p-2 rounded-lg"><i class="fas fa-shield-xmark text-yellow-400"></i></div>
+        </div>
+        <div class="text-3xl font-bold text-yellow-400" x-text="summary.tamperOff ?? '…'"></div>
+      </div>
+    </div>
+
+    <!-- Second row -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+      <!-- Alert severity -->
+      <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
+        <h3 class="text-sm font-semibold text-slate-300 mb-4">Alert Severity</h3>
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="flex items-center gap-2 text-sm text-red-400"><i class="fas fa-circle-exclamation"></i> High</span>
+            <span class="bg-red-500/20 text-red-300 px-3 py-0.5 rounded-full text-sm font-semibold" x-text="summary.highAlerts ?? 0"></span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="flex items-center gap-2 text-sm text-yellow-400"><i class="fas fa-triangle-exclamation"></i> Medium</span>
+            <span class="bg-yellow-500/20 text-yellow-300 px-3 py-0.5 rounded-full text-sm font-semibold" x-text="summary.mediumAlerts ?? 0"></span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="flex items-center gap-2 text-sm text-blue-400"><i class="fas fa-circle-info"></i> Low</span>
+            <span class="bg-blue-500/20 text-blue-300 px-3 py-0.5 rounded-full text-sm font-semibold" x-text="summary.lowAlerts ?? 0"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- OS Summary -->
+      <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
+        <h3 class="text-sm font-semibold text-slate-300 mb-4">OS Platform</h3>
+        <div class="space-y-2" x-show="summary.osSummary">
+          <template x-for="[os, count] in Object.entries(summary.osSummary || {})" :key="os">
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-slate-300 capitalize" x-text="os"></span>
+              <span class="text-sm font-semibold text-white" x-text="count"></span>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Health Overview -->
+      <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
+        <h3 class="text-sm font-semibold text-slate-300 mb-4">Health Overview</h3>
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="flex items-center gap-2 text-sm text-green-400"><i class="fas fa-circle-check"></i> Good</span>
+            <span class="font-semibold text-white" x-text="summary.healthy ?? 0"></span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="flex items-center gap-2 text-sm text-yellow-400"><i class="fas fa-circle-minus"></i> Suspicious</span>
+            <span class="font-semibold text-white" x-text="summary.suspicious ?? 0"></span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="flex items-center gap-2 text-sm text-red-400"><i class="fas fa-circle-xmark"></i> Bad</span>
+            <span class="font-semibold text-white" x-text="summary.bad ?? 0"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Alerts table -->
+    <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-700 flex items-center justify-between">
+        <h3 class="font-semibold text-white">Recent Alerts</h3>
+        <a href="/alerts" class="text-blue-400 text-sm hover:underline">View all →</a>
+      </div>
+      <div x-show="loadingAlerts" class="p-8 text-center text-slate-500"><i class="fas fa-spinner fa-spin mr-2"></i>Loading...</div>
+      <table class="w-full text-sm" x-show="!loadingAlerts">
+        <thead class="bg-slate-700/50">
+          <tr>
+            <th class="px-5 py-3 text-left text-slate-400 font-medium">Severity</th>
+            <th class="px-5 py-3 text-left text-slate-400 font-medium">Description</th>
+            <th class="px-5 py-3 text-left text-slate-400 font-medium">Device</th>
+            <th class="px-5 py-3 text-left text-slate-400 font-medium">Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="a in recentAlerts" :key="a.id">
+            <tr class="border-t border-slate-700/50 hover:bg-slate-700/30">
+              <td class="px-5 py-3">
+                <span :class="{
+                  'bg-red-500/20 text-red-300': a.severity === 'high',
+                  'bg-yellow-500/20 text-yellow-300': a.severity === 'medium',
+                  'bg-blue-500/20 text-blue-300': a.severity === 'low'
+                }" class="px-2 py-0.5 rounded-full text-xs font-semibold capitalize" x-text="a.severity"></span>
+              </td>
+              <td class="px-5 py-3 text-slate-300 max-w-xs truncate" x-text="a.description"></td>
+              <td class="px-5 py-3 text-slate-400" x-text="a.managedAgent?.name || '—'"></td>
+              <td class="px-5 py-3 text-slate-500 text-xs" x-text="new Date(a.raisedAt).toLocaleString()"></td>
+            </tr>
+          </template>
+          <tr x-show="recentAlerts.length === 0 && !loadingAlerts">
+            <td colspan="4" class="px-5 py-8 text-center text-slate-500">No active alerts</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <script>
+    function app() {
+      return {
+        summary: {},
+        recentAlerts: [],
+        loadingAlerts: true,
+        async init() {
+          try {
+            const [s, a] = await Promise.all([
+              fetch('/api/summary').then(r => r.json()),
+              fetch('/api/alerts').then(r => r.json()),
+            ]);
+            this.summary = s;
+            this.recentAlerts = (a.items || []).slice(0, 10);
+          } catch (e) {
+            console.error(e);
+          } finally {
+            this.loadingAlerts = false;
+          }
+        }
+      };
+    }
+  </script>
+</body>
+</html>

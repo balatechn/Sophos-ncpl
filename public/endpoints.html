@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Endpoints – Sophos Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script src="https://unpkg.com/alpinejs@3/dist/cdn.min.js" defer></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6/css/all.min.css">
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex" x-data="app()" x-init="init()">
+
+  <!-- Sidebar -->
+  <aside class="w-64 bg-slate-800 border-r border-slate-700 flex flex-col fixed h-full z-30">
+    <div class="p-5 border-b border-slate-700">
+      <div class="flex items-center gap-3">
+        <div class="bg-blue-600 rounded-lg p-2"><i class="fas fa-shield-halved text-white text-lg"></i></div>
+        <div><div class="font-bold text-white text-sm">Sophos Central</div><div class="text-xs text-slate-400">NCPL Dashboard</div></div>
+      </div>
+    </div>
+    <nav class="flex-1 p-3 space-y-1">
+      <a href="/" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-slate-300 hover:bg-blue-700/50 hover:text-white transition-colors"><i class="fas fa-gauge-high w-5 text-center"></i>Dashboard</a>
+      <a href="/endpoints" class="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-blue-600 text-white"><i class="fas fa-desktop w-5 text-center"></i>Endpoints</a>
+      <a href="/alerts" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-slate-300 hover:bg-blue-700/50 hover:text-white transition-colors"><i class="fas fa-bell w-5 text-center"></i>Alerts</a>
+      <a href="/threats" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-slate-300 hover:bg-blue-700/50 hover:text-white transition-colors"><i class="fas fa-virus w-5 text-center"></i>Threats</a>
+      <a href="/admins" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-slate-300 hover:bg-blue-700/50 hover:text-white transition-colors"><i class="fas fa-users-gear w-5 text-center"></i>Admins</a>
+    </nav>
+    <div class="p-3 border-t border-slate-700">
+      <form method="POST" action="/auth/logout">
+        <button class="flex items-center gap-3 px-4 py-2.5 rounded-lg w-full text-red-400 hover:bg-red-900/20 hover:text-red-300 transition-colors">
+          <i class="fas fa-right-from-bracket w-5 text-center"></i>Logout
+        </button>
+      </form>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="ml-64 flex-1 p-6">
+    <div class="mb-6 flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-white">Endpoints</h1>
+        <p class="text-slate-400 text-sm mt-1">All managed devices – device-wise analysis & software scan</p>
+      </div>
+      <div class="flex gap-2">
+        <input type="text" x-model="search" placeholder="Search endpoints…"
+          class="bg-slate-700 border border-slate-600 text-white placeholder-slate-400 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-64">
+        <select x-model="healthFilter" class="bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm">
+          <option value="">All Health</option>
+          <option value="good">Good</option>
+          <option value="suspicious">Suspicious</option>
+          <option value="bad">Bad</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div x-show="loading" class="text-center py-20 text-slate-400"><i class="fas fa-spinner fa-spin text-3xl"></i><p class="mt-3">Loading endpoints…</p></div>
+
+    <!-- Table -->
+    <div x-show="!loading" class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+      <div class="px-5 py-3 bg-slate-700/40 text-sm text-slate-400">
+        Showing <span class="text-white font-semibold" x-text="filtered.length"></span> of <span x-text="endpoints.length"></span> endpoints
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-700/50">
+            <tr>
+              <th class="px-4 py-3 text-left text-slate-400 font-medium">Device Name</th>
+              <th class="px-4 py-3 text-left text-slate-400 font-medium">Health</th>
+              <th class="px-4 py-3 text-left text-slate-400 font-medium">OS</th>
+              <th class="px-4 py-3 text-left text-slate-400 font-medium">IP Address</th>
+              <th class="px-4 py-3 text-left text-slate-400 font-medium">Tamper</th>
+              <th class="px-4 py-3 text-left text-slate-400 font-medium">Last Seen</th>
+              <th class="px-4 py-3 text-left text-slate-400 font-medium">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="ep in filtered" :key="ep.id">
+              <tr class="border-t border-slate-700/50 hover:bg-slate-700/30">
+                <td class="px-4 py-3">
+                  <div class="font-medium text-white" x-text="ep.hostname || ep.name"></div>
+                  <div class="text-xs text-slate-500" x-text="ep.id"></div>
+                </td>
+                <td class="px-4 py-3">
+                  <span :class="{
+                    'bg-green-500/20 text-green-300': ep.health?.overall === 'good',
+                    'bg-yellow-500/20 text-yellow-300': ep.health?.overall === 'suspicious',
+                    'bg-red-500/20 text-red-300': ep.health?.overall === 'bad',
+                    'bg-slate-500/20 text-slate-400': !ep.health?.overall
+                  }" class="px-2 py-0.5 rounded-full text-xs font-semibold capitalize" x-text="ep.health?.overall || 'unknown'"></span>
+                </td>
+                <td class="px-4 py-3 text-slate-300 text-xs" x-text="(ep.os?.name || ep.os?.platform || '—')"></td>
+                <td class="px-4 py-3 text-slate-400 text-xs" x-text="ep.ipv4Addresses?.[0] || '—'"></td>
+                <td class="px-4 py-3">
+                  <span :class="ep.tamperProtectionEnabled ? 'text-green-400' : 'text-red-400'">
+                    <i :class="ep.tamperProtectionEnabled ? 'fas fa-lock' : 'fas fa-lock-open'"></i>
+                    <span class="ml-1 text-xs" x-text="ep.tamperProtectionEnabled ? 'ON' : 'OFF'"></span>
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-slate-500 text-xs" x-text="ep.lastSeenAt ? new Date(ep.lastSeenAt).toLocaleString() : '—'"></td>
+                <td class="px-4 py-3">
+                  <div class="flex gap-2">
+                    <button @click="openDetail(ep)" class="text-blue-400 hover:text-blue-300 text-xs flex items-center gap-1 bg-blue-500/10 px-2 py-1 rounded">
+                      <i class="fas fa-magnifying-glass"></i> Scan SW
+                    </button>
+                    <button @click="confirmDelete(ep)" class="text-red-400 hover:text-red-300 text-xs flex items-center gap-1 bg-red-500/10 px-2 py-1 rounded">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Software Detail Modal -->
+    <div x-show="showDetail" x-cloak class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div class="bg-slate-800 rounded-2xl border border-slate-600 w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-700">
+          <div>
+            <h2 class="font-bold text-white" x-text="selectedEp?.hostname || selectedEp?.name"></h2>
+            <p class="text-slate-400 text-sm">Installed Software Scan</p>
+          </div>
+          <button @click="showDetail = false" class="text-slate-400 hover:text-white"><i class="fas fa-xmark text-xl"></i></button>
+        </div>
+        <div class="p-4 overflow-y-auto flex-1">
+          <div x-show="loadingSW" class="text-center py-10 text-slate-400"><i class="fas fa-spinner fa-spin"></i> Scanning…</div>
+          <div x-show="!loadingSW">
+            <div x-show="swError" class="text-yellow-400 text-sm mb-3" x-text="swError"></div>
+            <input type="text" x-model="swSearch" placeholder="Filter software…"
+              class="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <!-- Unlicensed / suspicious banner -->
+            <div x-show="unlicensed.length > 0" class="bg-red-900/30 border border-red-700 rounded-lg p-3 mb-3">
+              <p class="text-red-300 text-sm font-semibold mb-1"><i class="fas fa-triangle-exclamation mr-1"></i> Potentially Unlicensed / Unknown Software (<span x-text="unlicensed.length"></span>)</p>
+              <ul class="text-xs text-red-200 space-y-1">
+                <template x-for="sw in unlicensed" :key="sw.name">
+                  <li x-text="sw.name + (sw.publisher ? ' — ' + sw.publisher : '')"></li>
+                </template>
+              </ul>
+            </div>
+            <div class="space-y-1">
+              <template x-for="sw in filteredSW" :key="sw.name + sw.version">
+                <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-700/40 hover:bg-slate-700/70">
+                  <div>
+                    <div class="text-sm text-white" x-text="sw.name"></div>
+                    <div class="text-xs text-slate-400" x-text="(sw.publisher || 'Unknown Publisher') + ' — v' + (sw.version || 'N/A')"></div>
+                  </div>
+                  <div x-show="!sw.publisher" class="text-yellow-400 text-xs"><i class="fas fa-exclamation-triangle"></i></div>
+                </div>
+              </template>
+              <div x-show="filteredSW.length === 0 && !loadingSW" class="text-center text-slate-500 py-6 text-sm">No software found</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete Confirm Modal -->
+    <div x-show="showDeleteConfirm" x-cloak class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div class="bg-slate-800 rounded-2xl border border-red-700/50 w-full max-w-md shadow-2xl p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="bg-red-500/20 p-3 rounded-full"><i class="fas fa-trash text-red-400 text-xl"></i></div>
+          <div>
+            <h2 class="font-bold text-white">Remove Endpoint?</h2>
+            <p class="text-slate-400 text-sm" x-text="'This will remove: ' + (deleteTarget?.hostname || deleteTarget?.name)"></p>
+          </div>
+        </div>
+        <p class="text-slate-400 text-sm mb-6">This cannot be undone. The endpoint will be removed from Sophos Central.</p>
+        <div class="flex gap-3 justify-end">
+          <button @click="showDeleteConfirm = false" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-sm">Cancel</button>
+          <button @click="deleteEndpoint()" :disabled="deleting" class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-semibold disabled:opacity-50">
+            <span x-show="!deleting">Remove</span>
+            <span x-show="deleting"><i class="fas fa-spinner fa-spin mr-1"></i>Removing…</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const UNLICENSED_KEYWORDS = ['crack', 'keygen', 'patch', 'hack', 'pirat', 'serial', 'activat', 'loader', 'bypass'];
+    const KNOWN_PUBLISHERS = ['microsoft', 'google', 'adobe', 'intel', 'dell', 'hp ', 'lenovo', 'sophos', 'cisco', 'oracle', 'zoom', 'slack', 'chrome', 'mozilla', 'vmware', 'citrix'];
+
+    function app() {
+      return {
+        endpoints: [], loading: true, search: '', healthFilter: '',
+        showDetail: false, selectedEp: null, software: [], loadingSW: false, swSearch: '', swError: '',
+        showDeleteConfirm: false, deleteTarget: null, deleting: false,
+
+        get filtered() {
+          return this.endpoints.filter(ep => {
+            const name = (ep.hostname || ep.name || '').toLowerCase();
+            const matchSearch = !this.search || name.includes(this.search.toLowerCase());
+            const matchHealth = !this.healthFilter || ep.health?.overall === this.healthFilter;
+            return matchSearch && matchHealth;
+          });
+        },
+
+        get filteredSW() {
+          return this.software.filter(sw => !this.swSearch || (sw.name || '').toLowerCase().includes(this.swSearch.toLowerCase()));
+        },
+
+        get unlicensed() {
+          return this.software.filter(sw => {
+            const name = (sw.name || '').toLowerCase();
+            const pub = (sw.publisher || '').toLowerCase();
+            const hasKeyword = UNLICENSED_KEYWORDS.some(k => name.includes(k));
+            const unknownPub = !pub || !KNOWN_PUBLISHERS.some(k => pub.includes(k));
+            return hasKeyword || (unknownPub && name.length > 3);
+          });
+        },
+
+        async init() {
+          try {
+            const data = await fetch('/api/endpoints').then(r => r.json());
+            this.endpoints = data.items || [];
+          } catch(e) { console.error(e); }
+          finally { this.loading = false; }
+        },
+
+        async openDetail(ep) {
+          this.selectedEp = ep;
+          this.software = [];
+          this.swSearch = '';
+          this.swError = '';
+          this.loadingSW = true;
+          this.showDetail = true;
+          try {
+            const data = await fetch(`/api/endpoints/${ep.id}/installed-software`).then(r => r.json());
+            this.software = data.items || [];
+            if (this.software.length === 0) this.swError = 'No software data available for this endpoint via Sophos API.';
+          } catch(e) {
+            this.swError = 'Unable to retrieve software list: ' + e.message;
+          } finally {
+            this.loadingSW = false;
+          }
+        },
+
+        confirmDelete(ep) {
+          this.deleteTarget = ep;
+          this.showDeleteConfirm = true;
+        },
+
+        async deleteEndpoint() {
+          this.deleting = true;
+          try {
+            await fetch(`/api/endpoints/${this.deleteTarget.id}`, { method: 'DELETE' });
+            this.endpoints = this.endpoints.filter(e => e.id !== this.deleteTarget.id);
+            this.showDeleteConfirm = false;
+          } catch(e) { alert('Error: ' + e.message); }
+          finally { this.deleting = false; }
+        }
+      };
+    }
+  </script>
+</body>
+</html>
